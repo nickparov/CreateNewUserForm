@@ -1,13 +1,6 @@
-/**
- * Split into compontents
- * Add validation
- * localStorage for filling in fields &&& for not doing the requrest again (cache the resp)??
- */
-
 import * as React from "react";
 import Avatar from "@mui/material/Avatar";
 import Button from "@mui/material/Button";
-import CssBaseline from "@mui/material/CssBaseline";
 import TextField from "@mui/material/TextField";
 import Link from "@mui/material/Link";
 import Grid from "@mui/material/Grid";
@@ -15,18 +8,12 @@ import Box from "@mui/material/Box";
 import PersonIcon from "@mui/icons-material/Person";
 import CloseIcon from "@mui/icons-material/Close";
 import Typography from "@mui/material/Typography";
-import Container from "@mui/material/Container";
-import { createTheme, ThemeProvider } from "@mui/material/styles";
 
 import { useState, useEffect } from "react";
 import { AppActions, appDispatchFunc, AppState } from "../Store/app";
 import { AppDispatchContext, AppStateContext } from "../App";
 import axios from "axios";
-import {
-    DemographicApiResponse,
-    DemographicData,
-    State,
-} from "../utils/interfaces";
+import { DemographicApiResponse, DemographicData } from "../utils/interfaces";
 
 import {
     Alert,
@@ -38,34 +25,52 @@ import {
     MenuItem,
     Select,
 } from "@mui/material";
+
 import {
     validateEmail,
     validateValFromPool,
     validateName,
 } from "../utils/validators";
+
 import {
     InputData,
     UserInputData,
     UserInputPayload,
 } from "../utils/userData.interface";
+import { TextInputField } from "../Components/TextInputField";
 
-const theme = createTheme();
+const getCachedInput = () => {
+    const rawCachedInput = localStorage.getItem("userInput");
+    if (rawCachedInput === null) return null;
+
+    const cachedUserInput = JSON.parse(rawCachedInput) as UserInputData;
+
+    return cachedUserInput;
+};
+
+const getCachedDemographics = () => {
+    const rawCachedDemographics = localStorage.getItem("demographics");
+    if (rawCachedDemographics === null) return null;
+
+    return JSON.parse(rawCachedDemographics) as DemographicData;
+};
 
 export default function SignUpForm() {
     const dispatch = React.useContext(AppDispatchContext) as appDispatchFunc;
     const appState = React.useContext(AppStateContext) as AppState;
 
-    // Demographics
+    // Demographics state
     const initialDemographicData = {
         occupations: [],
         states: [],
     };
 
+    const cachedDemographics = getCachedDemographics();
     const [demographicData, setDemographicData] = useState<DemographicData>(
-        initialDemographicData
+        cachedDemographics ?? initialDemographicData
     );
 
-    // User Input Fields
+    // User Input state
     const initialUserInputData: UserInputData = {
         state: new InputData(null),
         occupation: new InputData(),
@@ -75,8 +80,10 @@ export default function SignUpForm() {
         email: new InputData(),
     };
 
-    const [inputData, setInputData] =
-        useState<UserInputData>(initialUserInputData);
+    const cachedInput = getCachedInput();
+    const [inputData, setInputData] = useState<UserInputData>(
+        cachedInput ?? initialUserInputData
+    );
 
     // render data
     const { firstName, lastName, email, occupation, state, password } =
@@ -194,10 +201,18 @@ export default function SignUpForm() {
                 )
                 .then((res) => {
                     const { data } = res;
+
                     dispatch({
                         type: AppActions.SET_USER_DATA,
                         payload: {
                             value: data,
+                        },
+                    });
+
+                    dispatch({
+                        type: AppActions.OPEN_SNACKBAR,
+                        payload: {
+                            msg: "Signed Up.",
                         },
                     });
                 })
@@ -210,13 +225,36 @@ export default function SignUpForm() {
                             value: `Something wrong: ${message}`,
                         },
                     });
+                })
+                .finally(() => {
+                    console.log(appState.userData);
+                    setInputData(initialUserInputData);
                 });
         }
+    };
+
+    const resetBtnHandler = () => {
+        setInputData({
+            ...initialUserInputData,
+        });
+
+        dispatch({
+            type: AppActions.RESET,
+        });
+
+        localStorage.removeItem("userInput");
+
+        localStorage.removeItem("demographics");
     };
 
     // initial api request
     useEffect(() => {
         // Get data.
+
+        // check demographic cache
+        if (cachedDemographics !== null) return;
+
+        // make a request in cache of cache miss
         axios
             .get("https://frontend-take-home.fetchrewards.com/form")
             .then((res) => {
@@ -224,6 +262,18 @@ export default function SignUpForm() {
                     res.data as DemographicApiResponse;
 
                 setDemographicData({ occupations, states });
+
+                localStorage.setItem(
+                    "demographics",
+                    JSON.stringify({ occupations, states })
+                );
+
+                dispatch({
+                    type: AppActions.OPEN_SNACKBAR,
+                    payload: {
+                        msg: "Fetched Demographic Data.",
+                    },
+                });
             })
             .catch((err) => {
                 const { message } = err;
@@ -237,258 +287,187 @@ export default function SignUpForm() {
             });
     }, []);
 
+    // on input update, write to local storage
+    useEffect(() => {
+        localStorage.setItem("userInput", JSON.stringify(inputData));
+    }, [inputData]);
+
     return (
-        <ThemeProvider theme={theme}>
-            <Container maxWidth="xs">
-                <CssBaseline />
-                <Box
-                    sx={{
-                        marginTop: 8,
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                    }}
-                >
-                    <Collapse in={!!appState.error}>
-                        <Alert
-                            severity="error"
-                            action={
-                                <IconButton
-                                    aria-label="close"
-                                    color="inherit"
-                                    size="small"
-                                    onClick={() => {
-                                        dispatch({
-                                            type: AppActions.SET_ERROR,
-                                            payload: {
-                                                value: false,
-                                            },
-                                        });
-                                    }}
-                                >
-                                    <CloseIcon fontSize="inherit" />
-                                </IconButton>
-                            }
-                            sx={{ mb: 2 }}
-                        >
-                            {appState.error}
-                        </Alert>
-                    </Collapse>
-
-                    <Avatar sx={{ m: 1, bgcolor: "info.main" }}>
-                        <PersonIcon />
-                    </Avatar>
-                    <Typography component="h1" variant="h5">
-                        Sign up
-                    </Typography>
-                    <Box
-                        component="form"
-                        sx={{ mt: 3 }}
-                        onSubmit={submitHandler}
-                    >
-                        <Grid container spacing={2}>
-                            <Grid item xs={12} sm={6}>
-                                <TextField
-                                    autoComplete="given-name"
-                                    name="firstName"
-                                    value={firstName.value}
-                                    required
-                                    fullWidth
-                                    id="firstName"
-                                    label="First Name"
-                                    autoFocus
-                                    onChange={(e) =>
-                                        setInputData({
-                                            ...inputData,
-                                            firstName: {
-                                                ...firstName,
-                                                value: e.target.value,
-                                                error: false,
-                                                helperText: "",
-                                            },
-                                        })
-                                    }
-                                    error={firstName.error}
-                                    helperText={firstName.helperText}
-                                />
-                            </Grid>
-                            <Grid item xs={12} sm={6}>
-                                <TextField
-                                    required
-                                    fullWidth
-                                    id="lastName"
-                                    label="Last Name"
-                                    name="lastName"
-                                    autoComplete="family-name"
-                                    onChange={(e) =>
-                                        setInputData({
-                                            ...inputData,
-                                            lastName: {
-                                                ...lastName,
-                                                value: e.target.value,
-                                                error: false,
-                                                helperText: "",
-                                            },
-                                        })
-                                    }
-                                    value={lastName.value}
-                                    error={lastName.error}
-                                    helperText={lastName.helperText}
-                                />
-                            </Grid>
-                            <Grid item xs={12}>
-                                <TextField
-                                    required
-                                    fullWidth
-                                    id="email"
-                                    label="Email Address"
-                                    name="email"
-                                    autoComplete="email"
-                                    onChange={(e) =>
-                                        setInputData({
-                                            ...inputData,
-                                            email: {
-                                                ...email,
-                                                value: e.target.value,
-                                                error: false,
-                                                helperText: "",
-                                            },
-                                        })
-                                    }
-                                    value={email.value}
-                                    helperText={email.helperText}
-                                    error={email.error}
-                                />
-                            </Grid>
-                            <Grid item xs={12} sm={6}>
-                                <FormControl fullWidth>
-                                    <InputLabel id="occupation-select-label">
-                                        Occupation
-                                    </InputLabel>
-                                    <Select
-                                        labelId="occupation-select-label"
-                                        id="occupation-select"
-                                        label="Occupation"
-                                        required
-                                        onChange={(e) =>
-                                            setInputData({
-                                                ...inputData,
-                                                occupation: {
-                                                    ...occupation,
-                                                    value: e.target
-                                                        .value as string,
-                                                    error: false,
-                                                    helperText: "",
-                                                },
-                                            })
-                                        }
-                                        value={occupation.value}
-                                        error={occupation.error}
-                                    >
-                                        {occupations.map((occ) => {
-                                            return (
-                                                <MenuItem
-                                                    value={occ}
-                                                    key={occ
-                                                        .split(" ")
-                                                        .join("_")}
-                                                >
-                                                    {occ}
-                                                </MenuItem>
-                                            );
-                                        })}
-                                    </Select>
-                                </FormControl>
-                            </Grid>
-                            <Grid item xs={12} sm={6}>
-                                <Autocomplete
-                                    disablePortal
-                                    id="combo-box-demo"
-                                    options={StatesAutocompleteOptions}
-                                    renderInput={(params) => (
-                                        <TextField
-                                            {...params}
-                                            label="State"
-                                            helperText={state.helperText}
-                                            error={state.error}
-                                            required
-                                        />
-                                    )}
-                                    onChange={(
-                                        event: any,
-                                        newValue: string | null
-                                    ) => {
-                                        setInputData({
-                                            ...inputData,
-                                            state: {
-                                                ...state,
-                                                value: newValue,
-                                                error: false,
-                                                helperText: "",
-                                            },
-                                        });
-                                    }}
-                                    value={state.value}
-                                />
-                            </Grid>
-                            <Grid item xs={12}>
-                                <TextField
-                                    required
-                                    fullWidth
-                                    name="password"
-                                    label="Password"
-                                    type="password"
-                                    id="password"
-                                    autoComplete="new-password"
-                                    onChange={(e) =>
-                                        setInputData({
-                                            ...inputData,
-                                            password: {
-                                                ...password,
-                                                value: e.target.value,
-                                                error: false,
-                                                helperText: "",
-                                            },
-                                        })
-                                    }
-                                    value={password.value}
-                                    helperText={password.helperText}
-                                    error={password.error}
-                                />
-                            </Grid>
-                        </Grid>
-                        <Button
-                            type="submit"
-                            fullWidth
-                            variant="contained"
-                            sx={{ mt: 3, mb: 1 }}
-                        >
-                            Sign Up
-                        </Button>
-
-                        <Button
-                            type="reset"
-                            fullWidth
-                            variant="outlined"
-                            sx={{ mb: 1 }}
-                            onClick={(e) => {
-                                setInputData({
-                                    ...initialUserInputData,
+        <Box
+            sx={{
+                marginTop: 8,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+            }}
+        >
+            <Collapse in={!!appState.error}>
+                <Alert
+                    severity="error"
+                    action={
+                        <IconButton
+                            aria-label="close"
+                            color="inherit"
+                            size="small"
+                            onClick={() => {
+                                dispatch({
+                                    type: AppActions.SET_ERROR,
+                                    payload: {
+                                        value: false,
+                                    },
                                 });
                             }}
                         >
-                            Reset
-                        </Button>
-                        <Grid container justifyContent="center">
-                            <Grid item>
-                                <Link href="#" variant="body2">
-                                    Already have an account? Sign in
-                                </Link>
-                            </Grid>
-                        </Grid>
-                    </Box>
-                </Box>
-            </Container>
-        </ThemeProvider>
+                            <CloseIcon fontSize="inherit" />
+                        </IconButton>
+                    }
+                    sx={{ mb: 2 }}
+                >
+                    {appState.error}
+                </Alert>
+            </Collapse>
+
+            <Avatar sx={{ m: 1, bgcolor: "info.main" }}>
+                <PersonIcon />
+            </Avatar>
+            <Typography component="h1" variant="h5">
+                Sign up
+            </Typography>
+            <Box component="form" sx={{ mt: 3 }} onSubmit={submitHandler}>
+                <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                        <TextInputField
+                            autoFocus
+                            setInputData={setInputData}
+                            data={firstName}
+                            id={"firstName"}
+                            inputData={inputData}
+                            label="First Name"
+                            type="text"
+                        />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                        <TextInputField
+                            setInputData={setInputData}
+                            data={lastName}
+                            id={"lastName"}
+                            inputData={inputData}
+                            label="Last Name"
+                            type="text"
+                        />
+                    </Grid>
+                    <Grid item xs={12}>
+                        <TextInputField
+                            setInputData={setInputData}
+                            data={email}
+                            id={"email"}
+                            inputData={inputData}
+                            label="Email"
+                            type="email"
+                        />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth>
+                            <InputLabel id="occupation-select-label">
+                                Occupation
+                            </InputLabel>
+                            <Select
+                                labelId="occupation-select-label"
+                                id="occupation-select"
+                                label="Occupation"
+                                required
+                                onChange={(e) =>
+                                    setInputData({
+                                        ...inputData,
+                                        occupation: {
+                                            ...occupation,
+                                            value: e.target.value as string,
+                                            error: false,
+                                            helperText: "",
+                                        },
+                                    })
+                                }
+                                value={occupation.value}
+                                error={occupation.error}
+                            >
+                                {occupations.map((occ) => {
+                                    return (
+                                        <MenuItem
+                                            value={occ}
+                                            key={occ.split(" ").join("_")}
+                                        >
+                                            {occ}
+                                        </MenuItem>
+                                    );
+                                })}
+                            </Select>
+                        </FormControl>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                        <Autocomplete
+                            disablePortal
+                            id="combo-box-demo"
+                            options={StatesAutocompleteOptions}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    label="State"
+                                    helperText={state.helperText}
+                                    error={state.error}
+                                    required
+                                />
+                            )}
+                            onChange={(event: any, newValue: string | null) => {
+                                setInputData({
+                                    ...inputData,
+                                    state: {
+                                        ...state,
+                                        value: newValue,
+                                        error: false,
+                                        helperText: "",
+                                    },
+                                });
+                            }}
+                            value={state.value}
+                        />
+                    </Grid>
+                    <Grid item xs={12}>
+                        <TextInputField
+                            setInputData={setInputData}
+                            data={password}
+                            id={"password"}
+                            inputData={inputData}
+                            label="Password"
+                            type="password"
+                        />
+                    </Grid>
+                </Grid>
+                <Button
+                    type="submit"
+                    fullWidth
+                    variant="contained"
+                    sx={{ mt: 3, mb: 1 }}
+                >
+                    Sign Up
+                </Button>
+
+                <Button
+                    type="reset"
+                    fullWidth
+                    variant="outlined"
+                    sx={{ mb: 1 }}
+                    onClick={resetBtnHandler}
+                >
+                    Reset
+                </Button>
+                <Grid container justifyContent="center">
+                    <Grid item>
+                        <Link href="#" variant="body2">
+                            Already have an account? Sign in
+                        </Link>
+                    </Grid>
+                </Grid>
+            </Box>
+        </Box>
     );
 }

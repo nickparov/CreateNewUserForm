@@ -1,4 +1,3 @@
-import { UserInputData } from "../utils/userData.interface";
 import * as actions from "./actions";
 
 export type UserData = {
@@ -42,7 +41,8 @@ export enum AppActions {
     CLOSE_SNACKBAR = "close_snackbar",
     SET_LOADING = "set_loading",
     SET_USER_DATA = "set_user_data",
-    SET_ERROR = "set_error"
+    SET_ERROR = "set_error",
+    RESET = "reset"
 }
 
 // Reducer
@@ -57,19 +57,29 @@ const appReducer = (
             return actions.closeSnackbar(state);
         case AppActions.SET_ERROR:
             return actions.setError(state, action);
-        case "set_loading":
-            return actions.setLoading(state, action);
+        case AppActions.SET_USER_DATA:
+            return actions.setUserData(state, action);
+        case AppActions.RESET:
+            return actions.reset(state);
         default:
             return state;
     }
 };
+
+// const initialUserData: UserData = {
+//     name: "nick",
+//     email: "nick@gmail.com",
+//     occupation: "occu",
+//     state: "state",
+//     id: "1231231-sjdklglsdfg-123123"
+// }
 
 const initialUserData: UserData = {
     name: "",
     email: "",
     occupation: "",
     state: "",
-    id: ""
+    id: "",
 }
 
 const initialState: AppState = {

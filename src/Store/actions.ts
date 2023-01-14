@@ -1,5 +1,4 @@
-import { UserInputPayload } from "../utils/userData.interface";
-import { AppAction, AppState, UserData } from "./app";
+import { AppAction, AppState, initialUserData, UserData } from "./app";
 
 // type ActionArgs = { state: AppState, action: AppAction };
 // type ActionFunc = (state: AppState, action: AppAction) => AppState;
@@ -27,20 +26,7 @@ export const closeSnackbar = (state: AppState) => {
         snackbar: {
             ...state.snackbar,
             open: false,
-            msg: "",
         },
-    };
-};
-
-
-
-export const setLoading = (state: AppState, action: AppAction) => {
-    if (action.payload === undefined)
-        return errState("No payload provided in setLoading action!", state);
-
-    return {
-        ...state,
-        loading: action.payload.loading,
     };
 };
 
@@ -63,16 +49,9 @@ export const setUserData = (state: AppState, action: AppAction) => {
     };
 };
 
-
-
-
-
 export const reset = (state: AppState) => {
     return {
         ...state,
-        code: "",
-        result: "",
-        luggage: false,
-        price: 0,
+        userData: initialUserData
     };
 };
