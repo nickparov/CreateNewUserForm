@@ -2,9 +2,6 @@
 import * as React from "react";
 import { useState, useEffect } from "react";
 
-// HTTP
-import axios from "axios";
-
 // Context & Dispatch
 import { AppActions, appDispatchFunc, AppState, UserData } from "../Store/app";
 import { AppDispatchContext, AppStateContext } from "../App";
@@ -132,7 +129,7 @@ export default function SignUpForm() {
         dispatch({
             type: AppActions.SET_ERROR,
             payload: {
-                value: `Something wrong: ${message}`,
+                value: `Unable to fetch Demographics data.`,
             },
         });
     };
@@ -177,6 +174,7 @@ export default function SignUpForm() {
         };
     };
 
+    // Main Validation
     const validate = () => {
         let isValid = true;
 
@@ -237,12 +235,12 @@ export default function SignUpForm() {
         return isValid;
     };
 
+    // Form Submit Handler
     const submitHandler = async (e: React.FormEvent<HTMLInputElement>) => {
         e.preventDefault();
 
         // If all fields are valid
         if (validate()) {
-            // All Good
             // form data obj
             const payload: UserInputPayload = formUserPayload();
 
@@ -250,6 +248,7 @@ export default function SignUpForm() {
         }
     };
 
+    // Reset Btn Handler
     const resetBtnHandler = () => {
         setInputData({
             ...initialUserInputData,

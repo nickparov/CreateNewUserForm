@@ -7,9 +7,6 @@ export const fetchDemographics = async (cb: (data: DemographicApiResponse) => vo
     axios
         .get("https://frontend-take-home.fetchrewards.com/form")
         .then((res) => {
-
-
-
             cb(res.data as DemographicApiResponse);
         })
         .catch((err) => {
