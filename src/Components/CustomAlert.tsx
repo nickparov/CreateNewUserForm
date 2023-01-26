@@ -10,9 +10,10 @@ interface Props {
 
 export const CustomAlert = (props: Props) => {
     const { clickHandler, error } = props;
+    const errorExists = !!error;
 
     return (
-        <Collapse in={!!error}>
+        <Collapse in={errorExists}>
             <Alert
                 severity="error"
                 action={

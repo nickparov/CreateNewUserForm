@@ -15,7 +15,7 @@ import { createTheme, CssBaseline, ThemeProvider } from "@mui/material";
 import { Container } from "@mui/system";
 import { User } from "./Containers/User";
 import { Cache } from "./Containers/Cache";
-import { MySnackbar } from "./Components/MySnackbar";
+import { CustomSnackbar } from "./Components/CustomSnackbar";
 import ErrorBoundary from "./Containers/ErrorBoundary";
 
 export const AppDispatchContext =
@@ -34,7 +34,7 @@ function App() {
                         <Container maxWidth="xs" sx={{ paddingBottom: 5 }}>
                             <CssBaseline />
                             {/* Alerts & etc. */}
-                            <MySnackbar />
+                            <CustomSnackbar />
 
                             {/* Containers */}
                             <SignUpForm />

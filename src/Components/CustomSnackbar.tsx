@@ -3,7 +3,7 @@ import React, { useContext } from "react";
 import { AppDispatchContext, AppStateContext } from "../App";
 import { AppActions, appDispatchFunc, AppState } from "../Store/app";
 
-export const MySnackbar = () => {
+export const CustomSnackbar = () => {
     const dispatch = useContext(AppDispatchContext) as appDispatchFunc;
     const appState = useContext(AppStateContext) as AppState;
 

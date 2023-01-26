@@ -22,6 +22,9 @@ import {
 
 // Custom Components
 import { TextInputField } from "../Components/TextInputField";
+import { OccupationField } from "../Components/OccupationField";
+import { StateField } from "../Components/StateField";
+import { CustomAlert } from "../Components/CustomAlert";
 
 // Validators
 import {
@@ -29,9 +32,6 @@ import {
     validateValFromPool,
     validateName,
 } from "../utils/validators";
-
-// General Interfaces
-import { State } from "../Interfaces/interfaces";
 
 // User Interfaces
 import {
@@ -52,26 +52,10 @@ import { getCachedDemographics, getCachedInput } from "../utils/Cache";
 // Initialize functions
 import { initUserInputData } from "../utils/UserInput";
 import { initDemographicData } from "../utils/DemographicData";
+
+// Model Methods
 import { fetchDemographics } from "../Models/Demographics";
 import { sendUser } from "../Models/User";
-import { OccupationField } from "../Components/OccupationField";
-import { StateField } from "../Components/StateField";
-import { CustomAlert } from "../Components/CustomAlert";
-
-const getInputErrorState = (
-    inputDataSnapshot: UserInputData,
-    data: InputData,
-    field: keyof UserInputData
-) => {
-    return {
-        ...inputDataSnapshot,
-        [field]: {
-            ...data,
-            error: true,
-            helperText: `Please, enter correct ${field}`,
-        },
-    };
-};
 
 export default function SignUpForm() {
     // Global App State & Dispatch
@@ -91,19 +75,13 @@ export default function SignUpForm() {
         cachedInput ?? initialUserInputData
     );
 
-    // render data
+    // Render data destructure
     const { firstName, lastName, email, occupation, state, password } =
         inputData;
 
     const { occupations, states } = demographicData;
 
     const statesOptions = formStatesOptions();
-
-    function formStatesOptions() {
-        return states
-            .map(({ name }) => name)
-            .concat(states.map(({ abbreviation }) => abbreviation));
-    }
 
     // Demographics API Request Handlers
     const demographicsFetchHandler = (data: DemographicApiResponse) => {
@@ -173,7 +151,29 @@ export default function SignUpForm() {
         };
     };
 
-    // Main Validation
+    function formStatesOptions() {
+        return states
+            .map(({ name }) => name)
+            .concat(states.map(({ abbreviation }) => abbreviation));
+    }
+
+    // Validation Error Input State
+    const getInputErrorState = (
+        inputDataSnapshot: UserInputData,
+        data: InputData,
+        field: keyof UserInputData
+    ) => {
+        return {
+            ...inputDataSnapshot,
+            [field]: {
+                ...data,
+                error: true,
+                helperText: `Please, enter correct ${field}`,
+            },
+        };
+    };
+
+    // Validation
     const validate = () => {
         let isValid = true;
 
@@ -242,7 +242,25 @@ export default function SignUpForm() {
         return isValid;
     };
 
-    // Handlers
+    // Effects
+    // Initial API request
+    useEffect(() => {
+        // if cached, return
+        if (getCachedDemographics() !== null) return;
+
+        // Demographics API request (async)
+        fetchDemographics(
+            demographicsFetchHandler,
+            demographicsFetchErrHandler
+        );
+    }, []);
+
+    // On user input update, write to local storage
+    useEffect(() => {
+        localStorage.setItem("userInput", JSON.stringify(inputData));
+    }, [inputData]);
+
+    // Event Handlers
     // Form Submit Handler
     const submitHandler = async (e: React.FormEvent<HTMLInputElement>) => {
         e.preventDefault();
@@ -269,24 +287,6 @@ export default function SignUpForm() {
         localStorage.removeItem("userInput");
         localStorage.removeItem("demographics");
     };
-
-    // Effects
-    // Initial API request
-    useEffect(() => {
-        // if cached, return
-        if (getCachedDemographics() !== null) return;
-
-        // Demographics API request (async)
-        fetchDemographics(
-            demographicsFetchHandler,
-            demographicsFetchErrHandler
-        );
-    }, []);
-
-    // On user input update, write to local storage
-    useEffect(() => {
-        localStorage.setItem("userInput", JSON.stringify(inputData));
-    }, [inputData]);
 
     const occupationChangeHandler = (e: SelectChangeEvent<any>) => {
         setInputData({
@@ -401,7 +401,7 @@ export default function SignUpForm() {
                         />
                     </Grid>
                 </Grid>
-                
+
                 <Button
                     type="submit"
                     fullWidth
