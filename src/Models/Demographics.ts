@@ -4,14 +4,13 @@ import { DemographicApiResponse } from "../Interfaces/demographic.interface";
 
 
 export const fetchDemographics = async (cb: (data: DemographicApiResponse) => void, errCb: (message: string) => void) => {
-    axios
-        .get("https://frontend-take-home.fetchrewards.com/form")
-        .then((res) => {
-            cb(res.data as DemographicApiResponse);
-        })
-        .catch((err) => {
-            const { message } = err as Error;
+    try {
+        const res = await axios.get("https://frontend-take-home.fetchrewards.com/form");
+        const responseData = res.data as DemographicApiResponse;
 
-            errCb(message);
-        });
+        cb(responseData);
+    } catch (err) {
+        const { message } = err as Error;
+        errCb(message);
+    }
 }

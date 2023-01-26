@@ -8,26 +8,16 @@ import { AppDispatchContext, AppStateContext } from "../App";
 
 // Material UI Icons
 import PersonIcon from "@mui/icons-material/Person";
-import CloseIcon from "@mui/icons-material/Close";
 
 // Material UI components
 import {
-    Alert,
-    Autocomplete,
-    Collapse,
-    FormControl,
-    IconButton,
-    InputLabel,
-    MenuItem,
-    Select,
     Typography,
     Avatar,
     Button,
-    TextField,
     Link,
     Grid,
     Box,
-    FormHelperText,
+    SelectChangeEvent,
 } from "@mui/material";
 
 // Custom Components
@@ -39,6 +29,9 @@ import {
     validateValFromPool,
     validateName,
 } from "../utils/validators";
+
+// General Interfaces
+import { State } from "../Interfaces/interfaces";
 
 // User Interfaces
 import {
@@ -61,6 +54,9 @@ import { initUserInputData } from "../utils/UserInput";
 import { initDemographicData } from "../utils/DemographicData";
 import { fetchDemographics } from "../Models/Demographics";
 import { sendUser } from "../Models/User";
+import { OccupationField } from "../Components/OccupationField";
+import { StateField } from "../Components/StateField";
+import { CustomAlert } from "../Components/CustomAlert";
 
 const getInputErrorState = (
     inputDataSnapshot: UserInputData,
@@ -78,7 +74,7 @@ const getInputErrorState = (
 };
 
 export default function SignUpForm() {
-    // Global App State
+    // Global App State & Dispatch
     const dispatch = React.useContext(AppDispatchContext) as appDispatchFunc;
     const appState = React.useContext(AppStateContext) as AppState;
 
@@ -101,10 +97,13 @@ export default function SignUpForm() {
 
     const { occupations, states } = demographicData;
 
-    // Form States Autocomplete options vals
-    const StatesAutocompleteOptions = states
-        .map(({ name }) => name)
-        .concat(states.map(({ abbreviation }) => abbreviation));
+    const statesOptions = formStatesOptions();
+
+    function formStatesOptions() {
+        return states
+            .map(({ name }) => name)
+            .concat(states.map(({ abbreviation }) => abbreviation));
+    }
 
     // Demographics API Request Handlers
     const demographicsFetchHandler = (data: DemographicApiResponse) => {
@@ -178,63 +177,72 @@ export default function SignUpForm() {
     const validate = () => {
         let isValid = true;
 
-        setInputData((inputDataSnapshot) => {
-            // firstName
-            if (!validateName(firstName.value)) {
-                isValid = false;
+        // firstName
+        if (!validateName(firstName.value)) {
+            isValid = false;
+            setInputData((inputDataSnapshot) => {
                 return getInputErrorState(
                     inputDataSnapshot,
                     firstName,
                     "firstName"
                 );
-            }
+            });
+        }
 
-            // last name
-            if (!validateName(lastName.value)) {
-                isValid = false;
+        // last name
+        if (!validateName(lastName.value)) {
+            isValid = false;
+            setInputData((inputDataSnapshot) => {
                 return getInputErrorState(
                     inputDataSnapshot,
                     lastName,
                     "lastName"
                 );
-            }
-            // Email
-            if (!validateEmail(email.value)) {
-                isValid = false;
+            });
+        }
+        // Email
+        if (!validateEmail(email.value)) {
+            isValid = false;
+            setInputData((inputDataSnapshot) => {
                 return getInputErrorState(inputDataSnapshot, email, "email");
-            }
+            });
+        }
 
-            // Occupation
-            if (!validateValFromPool(occupation.value, occupations)) {
-                isValid = false;
+        // Occupation
+        if (!validateValFromPool(occupation.value, occupations)) {
+            isValid = false;
+            setInputData((inputDataSnapshot) => {
                 return getInputErrorState(
                     inputDataSnapshot,
                     occupation,
                     "occupation"
                 );
-            }
+            });
+        }
 
-            // State
-            if (!validateValFromPool(state.value, StatesAutocompleteOptions)) {
-                isValid = false;
+        // State
+        if (!validateValFromPool(state.value, statesOptions)) {
+            isValid = false;
+            setInputData((inputDataSnapshot) => {
                 return getInputErrorState(inputDataSnapshot, state, "state");
-            }
+            });
+        }
 
-            if (password.value !== null && password.value.length < 5) {
-                isValid = false;
+        if (password.value !== null && password.value.length < 5) {
+            isValid = false;
+            setInputData((inputDataSnapshot) => {
                 return getInputErrorState(
                     inputDataSnapshot,
                     password,
                     "password"
                 );
-            }
-
-            return inputDataSnapshot;
-        });
+            });
+        }
 
         return isValid;
     };
 
+    // Handlers
     // Form Submit Handler
     const submitHandler = async (e: React.FormEvent<HTMLInputElement>) => {
         e.preventDefault();
@@ -262,30 +270,55 @@ export default function SignUpForm() {
         localStorage.removeItem("demographics");
     };
 
+    // Effects
     // Initial API request
     useEffect(() => {
         // if cached, return
         if (getCachedDemographics() !== null) return;
 
-        // Demographics API request
+        // Demographics API request (async)
         fetchDemographics(
             demographicsFetchHandler,
             demographicsFetchErrHandler
         );
     }, []);
 
-    // On input update, write to local storage
+    // On user input update, write to local storage
     useEffect(() => {
         localStorage.setItem("userInput", JSON.stringify(inputData));
     }, [inputData]);
 
-    const OccupationErrorText = () => {
-        if (occupation.helperText !== null && occupation.helperText.length > 0)
-            return (
-                <FormHelperText error>{occupation.helperText}</FormHelperText>
-            );
+    const occupationChangeHandler = (e: SelectChangeEvent<any>) => {
+        setInputData({
+            ...inputData,
+            occupation: {
+                ...occupation,
+                value: e.target.value as string,
+                error: false,
+                helperText: "",
+            },
+        });
+    };
 
-        return null;
+    const stateChangeHandler = (event: any, newValue: string | null) => {
+        setInputData({
+            ...inputData,
+            state: {
+                ...state,
+                value: newValue,
+                error: false,
+                helperText: "",
+            },
+        });
+    };
+
+    const closeAlertClickHandler = () => {
+        dispatch({
+            type: AppActions.SET_ERROR,
+            payload: {
+                value: false,
+            },
+        });
     };
 
     return (
@@ -297,38 +330,19 @@ export default function SignUpForm() {
                 alignItems: "center",
             }}
         >
-            <Collapse in={!!appState.error}>
-                <Alert
-                    severity="error"
-                    action={
-                        <IconButton
-                            aria-label="close"
-                            color="inherit"
-                            size="small"
-                            onClick={() => {
-                                dispatch({
-                                    type: AppActions.SET_ERROR,
-                                    payload: {
-                                        value: false,
-                                    },
-                                });
-                            }}
-                        >
-                            <CloseIcon fontSize="inherit" />
-                        </IconButton>
-                    }
-                    sx={{ mb: 2 }}
-                >
-                    {appState.error}
-                </Alert>
-            </Collapse>
+            <CustomAlert
+                error={appState.error}
+                clickHandler={closeAlertClickHandler}
+            />
 
             <Avatar sx={{ m: 1, bgcolor: "info.main" }}>
                 <PersonIcon />
             </Avatar>
+
             <Typography component="h1" variant="h5">
                 Sign up
             </Typography>
+
             <Box component="form" sx={{ mt: 3 }} onSubmit={submitHandler}>
                 <Grid container spacing={2}>
                     <Grid item xs={12} sm={6}>
@@ -363,67 +377,17 @@ export default function SignUpForm() {
                         />
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                        <FormControl fullWidth>
-                            <InputLabel id="occupation-select-label">
-                                Occupation
-                            </InputLabel>
-                            <Select
-                                labelId="occupation-select-label"
-                                id="occupation-select"
-                                label="Occupation"
-                                onChange={(e) =>
-                                    setInputData({
-                                        ...inputData,
-                                        occupation: {
-                                            ...occupation,
-                                            value: e.target.value as string,
-                                            error: false,
-                                            helperText: "",
-                                        },
-                                    })
-                                }
-                                value={occupation.value}
-                                error={occupation.error}
-                            >
-                                {occupations.map((occ) => {
-                                    return (
-                                        <MenuItem
-                                            value={occ}
-                                            key={occ.split(" ").join("_")}
-                                        >
-                                            {occ}
-                                        </MenuItem>
-                                    );
-                                })}
-                            </Select>
-                            {OccupationErrorText()}
-                        </FormControl>
+                        <OccupationField
+                            onChangeHandler={occupationChangeHandler}
+                            data={occupation}
+                            occupations={occupations}
+                        />
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                        <Autocomplete
-                            disablePortal
-                            id="combo-box-demo"
-                            options={StatesAutocompleteOptions}
-                            renderInput={(params) => (
-                                <TextField
-                                    {...params}
-                                    label="State"
-                                    helperText={state.helperText}
-                                    error={state.error}
-                                />
-                            )}
-                            onChange={(event: any, newValue: string | null) => {
-                                setInputData({
-                                    ...inputData,
-                                    state: {
-                                        ...state,
-                                        value: newValue,
-                                        error: false,
-                                        helperText: "",
-                                    },
-                                });
-                            }}
-                            value={state.value}
+                        <StateField
+                            data={state}
+                            onChangeHandler={stateChangeHandler}
+                            options={statesOptions}
                         />
                     </Grid>
                     <Grid item xs={12}>
@@ -437,6 +401,7 @@ export default function SignUpForm() {
                         />
                     </Grid>
                 </Grid>
+                
                 <Button
                     type="submit"
                     fullWidth

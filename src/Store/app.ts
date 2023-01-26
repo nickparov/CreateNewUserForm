@@ -36,7 +36,7 @@ type anyObject = {
 type horizontalType = "center" | "left" | "right";
 type verticalType = "bottom" | "top";
 
-type UIErrorType = string | null;
+export type UIErrorType = string | null;
 
 export enum AppActions {
     OPEN_SNACKBAR = "open_snackbar",

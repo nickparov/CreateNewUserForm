@@ -7,7 +7,8 @@ import { UserInputData } from "../Interfaces/userData.interface";
 
 const getCachedInput = () => {
     const rawCachedInput = localStorage.getItem("userInput");
-    if (rawCachedInput === null) return null;
+    if (rawCachedInput === null)
+        return null;
 
     const cachedUserInput = JSON.parse(rawCachedInput) as UserInputData;
 
@@ -16,7 +17,8 @@ const getCachedInput = () => {
 
 const getCachedDemographics = () => {
     const rawCachedDemographics = localStorage.getItem("demographics");
-    if (rawCachedDemographics === null) return null;
+    if (rawCachedDemographics === null)
+        return null;
 
     return JSON.parse(rawCachedDemographics) as DemographicData;
 };

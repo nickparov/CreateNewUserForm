@@ -2,23 +2,24 @@ import * as React from "react";
 import { AppStateContext } from "../App";
 import { AppState } from "../Store/app";
 
-import { SingleCard } from "../Components/SingleCard";
+import { CustomCard } from "../Components/CustomCard";
 
 export const User = () => {
     const appState = React.useContext(AppStateContext) as AppState;
     const { email, name, occupation, state, id } = appState.userData;
 
-    if (id === "")
+    if (id === "") {
         return (
-            <SingleCard
+            <CustomCard
                 paragraphs={[
                     "Fill out the form to see post req response data.",
                 ]}
             />
         );
+    }
 
     return (
-        <SingleCard
+        <CustomCard
             title={"User Submitted Data"}
             paragraphs={[email, name, occupation, state, id]}
         />
