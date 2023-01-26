@@ -14,13 +14,15 @@ export class InputData {
     }
 }
 
+// export type InputData = { error: boolean, value: string | null, helperText: string | null };
+
 export type UserInputData = {
-    firstName: InputData;
-    lastName: InputData;
-    email: InputData;
-    occupation: InputData;
-    state: InputData;
-    password: InputData;
+    "firstName": InputData;
+    "lastName": InputData;
+    "email": InputData;
+    "occupation": InputData;
+    "state": InputData;
+    "password": InputData;
 };
 
 

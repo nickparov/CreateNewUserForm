@@ -2,8 +2,9 @@ import { Box, Grid } from "@mui/material";
 import * as React from "react";
 
 import { SingleCard } from "../Components/SingleCard";
-import { DemographicData } from "../utils/interfaces";
-import { UserInputData } from "../utils/userData.interface";
+import { DemographicData } from "../Interfaces/demographic.interface";
+
+import { UserInputData } from "../Interfaces/userData.interface";
 
 export const Cache = () => {
     let demographics: DemographicData | string | null =

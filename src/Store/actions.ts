@@ -15,7 +15,7 @@ export const openSnackbar = (state: AppState, action: AppAction) => {
         snackbar: {
             ...state.snackbar,
             open: true,
-            msg: action.payload.msg,
+            msg: action.payload.value,
         },
     };
 };

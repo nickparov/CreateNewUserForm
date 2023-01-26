@@ -1,7 +1,4 @@
-export interface State {
-    name: string;
-    abbreviation: string;
-}
+import { State } from "./interfaces";
 
 export interface DemographicApiResponse {
     occupations: string[];

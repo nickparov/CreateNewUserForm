@@ -1,20 +1,19 @@
+// React
 import * as React from "react";
-import Avatar from "@mui/material/Avatar";
-import Button from "@mui/material/Button";
-import TextField from "@mui/material/TextField";
-import Link from "@mui/material/Link";
-import Grid from "@mui/material/Grid";
-import Box from "@mui/material/Box";
+import { useState, useEffect } from "react";
+
+// HTTP
+import axios from "axios";
+
+// Context & Dispatch
+import { AppActions, appDispatchFunc, AppState, UserData } from "../Store/app";
+import { AppDispatchContext, AppStateContext } from "../App";
+
+// Material UI Icons
 import PersonIcon from "@mui/icons-material/Person";
 import CloseIcon from "@mui/icons-material/Close";
-import Typography from "@mui/material/Typography";
 
-import { useState, useEffect } from "react";
-import { AppActions, appDispatchFunc, AppState } from "../Store/app";
-import { AppDispatchContext, AppStateContext } from "../App";
-import axios from "axios";
-import { DemographicApiResponse, DemographicData } from "../utils/interfaces";
-
+// Material UI components
 import {
     Alert,
     Autocomplete,
@@ -24,61 +23,75 @@ import {
     InputLabel,
     MenuItem,
     Select,
+    Typography,
+    Avatar,
+    Button,
+    TextField,
+    Link,
+    Grid,
+    Box,
+    FormHelperText,
 } from "@mui/material";
 
+// Custom Components
+import { TextInputField } from "../Components/TextInputField";
+
+// Validators
 import {
     validateEmail,
     validateValFromPool,
     validateName,
 } from "../utils/validators";
 
+// User Interfaces
 import {
     InputData,
     UserInputData,
     UserInputPayload,
-} from "../utils/userData.interface";
-import { TextInputField } from "../Components/TextInputField";
+} from "../Interfaces/userData.interface";
 
-const getCachedInput = () => {
-    const rawCachedInput = localStorage.getItem("userInput");
-    if (rawCachedInput === null) return null;
+// Demographic Interfaces
+import {
+    DemographicApiResponse,
+    DemographicData,
+} from "../Interfaces/demographic.interface";
 
-    const cachedUserInput = JSON.parse(rawCachedInput) as UserInputData;
+// Cache
+import { getCachedDemographics, getCachedInput } from "../utils/Cache";
 
-    return cachedUserInput;
-};
+// Initialize functions
+import { initUserInputData } from "../utils/UserInput";
+import { initDemographicData } from "../utils/DemographicData";
+import { fetchDemographics } from "../Models/Demographics";
+import { sendUser } from "../Models/User";
 
-const getCachedDemographics = () => {
-    const rawCachedDemographics = localStorage.getItem("demographics");
-    if (rawCachedDemographics === null) return null;
-
-    return JSON.parse(rawCachedDemographics) as DemographicData;
+const getInputErrorState = (
+    inputDataSnapshot: UserInputData,
+    data: InputData,
+    field: keyof UserInputData
+) => {
+    return {
+        ...inputDataSnapshot,
+        [field]: {
+            ...data,
+            error: true,
+            helperText: `Please, enter correct ${field}`,
+        },
+    };
 };
 
 export default function SignUpForm() {
+    // Global App State
     const dispatch = React.useContext(AppDispatchContext) as appDispatchFunc;
     const appState = React.useContext(AppStateContext) as AppState;
 
     // Demographics state
-    const initialDemographicData = {
-        occupations: [],
-        states: [],
-    };
-
-    const cachedDemographics = getCachedDemographics();
     const [demographicData, setDemographicData] = useState<DemographicData>(
-        cachedDemographics ?? initialDemographicData
+        getCachedDemographics() ?? initDemographicData()
     );
 
-    // User Input state
-    const initialUserInputData: UserInputData = {
-        state: new InputData(null),
-        occupation: new InputData(),
-        password: new InputData(),
-        firstName: new InputData(),
-        lastName: new InputData(),
-        email: new InputData(),
-    };
+    // User Input local state
+    const initialUserInputData = initUserInputData();
 
     const cachedInput = getCachedInput();
     const [inputData, setInputData] = useState<UserInputData>(
@@ -91,145 +104,149 @@ export default function SignUpForm() {
 
     const { occupations, states } = demographicData;
 
+    // Form States Autocomplete options vals
     const StatesAutocompleteOptions = states
         .map(({ name }) => name)
         .concat(states.map(({ abbreviation }) => abbreviation));
 
-    // handlers
-    const submitHandler = (e: React.FormEvent<HTMLInputElement>) => {
+    // Demographics API Request Handlers
+    const demographicsFetchHandler = (data: DemographicApiResponse) => {
+        const { occupations, states } = data;
+
+        setDemographicData({ occupations, states });
+
+        localStorage.setItem(
+            "demographics",
+            JSON.stringify({ occupations, states })
+        );
+
+        dispatch({
+            type: AppActions.OPEN_SNACKBAR,
+            payload: {
+                value: "Fetched Demographic Data.",
+            },
+        });
+    };
+
+    const demographicsFetchErrHandler = (message: string) => {
+        dispatch({
+            type: AppActions.SET_ERROR,
+            payload: {
+                value: `Something wrong: ${message}`,
+            },
+        });
+    };
+
+    // User API Request Handlers
+    const sendUserHandler = (data: UserData) => {
+        dispatch({
+            type: AppActions.SET_USER_DATA,
+            payload: {
+                value: data,
+            },
+        });
+
+        dispatch({
+            type: AppActions.OPEN_SNACKBAR,
+            payload: {
+                value: "Signed Up.",
+            },
+        });
+
+        setInputData({
+            ...initUserInputData(),
+        });
+    };
+
+    const sendUserErrHandler = (message: string) => {
+        dispatch({
+            type: AppActions.SET_ERROR,
+            payload: {
+                value: `Something wrong: ${message}`,
+            },
+        });
+    };
+
+    const formUserPayload = (): UserInputPayload => {
+        return {
+            name: `${firstName.value} ${lastName.value}`,
+            state: state.value as string,
+            occupation: occupation.value as string,
+            email: email.value as string,
+            password: password.value as string,
+        };
+    };
+
+    const validate = () => {
+        let isValid = true;
+
+        setInputData((inputDataSnapshot) => {
+            // firstName
+            if (!validateName(firstName.value)) {
+                isValid = false;
+                return getInputErrorState(
+                    inputDataSnapshot,
+                    firstName,
+                    "firstName"
+                );
+            }
+
+            // last name
+            if (!validateName(lastName.value)) {
+                isValid = false;
+                return getInputErrorState(
+                    inputDataSnapshot,
+                    lastName,
+                    "lastName"
+                );
+            }
+            // Email
+            if (!validateEmail(email.value)) {
+                isValid = false;
+                return getInputErrorState(inputDataSnapshot, email, "email");
+            }
+
+            // Occupation
+            if (!validateValFromPool(occupation.value, occupations)) {
+                isValid = false;
+                return getInputErrorState(
+                    inputDataSnapshot,
+                    occupation,
+                    "occupation"
+                );
+            }
+
+            // State
+            if (!validateValFromPool(state.value, StatesAutocompleteOptions)) {
+                isValid = false;
+                return getInputErrorState(inputDataSnapshot, state, "state");
+            }
+
+            if (password.value !== null && password.value.length < 5) {
+                isValid = false;
+                return getInputErrorState(
+                    inputDataSnapshot,
+                    password,
+                    "password"
+                );
+            }
+
+            return inputDataSnapshot;
+        });
+
+        return isValid;
+    };
+
+    const submitHandler = async (e: React.FormEvent<HTMLInputElement>) => {
         e.preventDefault();
 
-        // validations
-        let errExists = false;
-
-        // Email
-        if (!validateEmail(email.value)) {
-            setInputData((_inputData) => {
-                return {
-                    ..._inputData,
-                    email: {
-                        ...email,
-                        error: true,
-                        helperText: "Please, enter correct email.",
-                    },
-                };
-            });
-
-            errExists = true;
-        }
-
-        // State
-        if (!validateValFromPool(state.value, StatesAutocompleteOptions)) {
-            setInputData((_inputData) => {
-                return {
-                    ..._inputData,
-                    state: {
-                        ...state,
-                        error: true,
-                        helperText: "Please, enter correct state.",
-                    },
-                };
-            });
-
-            errExists = true;
-        }
-
-        // firstName
-        if (!validateName(firstName.value)) {
-            setInputData((_inputData) => {
-                return {
-                    ..._inputData,
-                    firstName: {
-                        ...firstName,
-                        error: true,
-                        helperText: "Please, enter correct first name.",
-                    },
-                };
-            });
-
-            errExists = true;
-        }
-
-        // last name
-        if (!validateName(lastName.value)) {
-            setInputData((_inputData) => {
-                return {
-                    ..._inputData,
-                    lastName: {
-                        ...lastName,
-                        error: true,
-                        helperText: "Please, enter correct last name.",
-                    },
-                };
-            });
-
-            errExists = true;
-        }
-
-        // Occupation
-        if (!validateValFromPool(occupation.value, occupations)) {
-            setInputData((_inputData) => {
-                return {
-                    ..._inputData,
-                    occupation: {
-                        ...occupation,
-                        error: true,
-                        helperText: "Please, select correct occupation.",
-                    },
-                };
-            });
-
-            errExists = true;
-        }
-
-        if (!errExists) {
+        // If all fields are valid
+        if (validate()) {
             // All Good
             // form data obj
-            const payload: UserInputPayload = {
-                name: `${firstName.value} ${lastName.value}`,
-                state: state.value as string,
-                occupation: occupation.value as string,
-                email: email.value as string,
-                password: password.value as string,
-            };
+            const payload: UserInputPayload = formUserPayload();
 
-            // Make final post request.
-            axios
-                .post(
-                    "https://frontend-take-home.fetchrewards.com/form",
-                    payload
-                )
-                .then((res) => {
-                    const { data } = res;
-
-                    dispatch({
-                        type: AppActions.SET_USER_DATA,
-                        payload: {
-                            value: data,
-                        },
-                    });
-
-                    dispatch({
-                        type: AppActions.OPEN_SNACKBAR,
-                        payload: {
-                            msg: "Signed Up.",
-                        },
-                    });
-                })
-                .catch((err) => {
-                    const { message } = err;
-
-                    dispatch({
-                        type: AppActions.SET_ERROR,
-                        payload: {
-                            value: `Something wrong: ${message}`,
-                        },
-                    });
-                })
-                .finally(() => {
-                    console.log(appState.userData);
-                    setInputData(initialUserInputData);
-                });
+            sendUser(payload, sendUserHandler, sendUserErrHandler);
         }
     };
 
@@ -243,54 +260,34 @@ export default function SignUpForm() {
         });
 
         localStorage.removeItem("userInput");
-
         localStorage.removeItem("demographics");
     };
 
-    // initial api request
+    // Initial API request
     useEffect(() => {
-        // Get data.
+        // if cached, return
+        if (getCachedDemographics() !== null) return;
 
-        // check demographic cache
-        if (cachedDemographics !== null) return;
-
-        // make a request in cache of cache miss
-        axios
-            .get("https://frontend-take-home.fetchrewards.com/form")
-            .then((res) => {
-                const { occupations, states } =
-                    res.data as DemographicApiResponse;
-
-                setDemographicData({ occupations, states });
-
-                localStorage.setItem(
-                    "demographics",
-                    JSON.stringify({ occupations, states })
-                );
-
-                dispatch({
-                    type: AppActions.OPEN_SNACKBAR,
-                    payload: {
-                        msg: "Fetched Demographic Data.",
-                    },
-                });
-            })
-            .catch((err) => {
-                const { message } = err;
-
-                dispatch({
-                    type: AppActions.SET_ERROR,
-                    payload: {
-                        value: `Something wrong: ${message}`,
-                    },
-                });
-            });
+        // Demographics API request
+        fetchDemographics(
+            demographicsFetchHandler,
+            demographicsFetchErrHandler
+        );
     }, []);
 
-    // on input update, write to local storage
+    // On input update, write to local storage
     useEffect(() => {
         localStorage.setItem("userInput", JSON.stringify(inputData));
     }, [inputData]);
+
+    const OccupationErrorText = () => {
+        if (occupation.helperText !== null && occupation.helperText.length > 0)
+            return (
+                <FormHelperText error>{occupation.helperText}</FormHelperText>
+            );
+
+        return null;
+    };
 
     return (
         <Box
@@ -363,7 +360,7 @@ export default function SignUpForm() {
                             id={"email"}
                             inputData={inputData}
                             label="Email"
-                            type="email"
+                            type="text"
                         />
                     </Grid>
                     <Grid item xs={12} sm={6}>
@@ -375,7 +372,6 @@ export default function SignUpForm() {
                                 labelId="occupation-select-label"
                                 id="occupation-select"
                                 label="Occupation"
-                                required
                                 onChange={(e) =>
                                     setInputData({
                                         ...inputData,
@@ -401,6 +397,7 @@ export default function SignUpForm() {
                                     );
                                 })}
                             </Select>
+                            {OccupationErrorText()}
                         </FormControl>
                     </Grid>
                     <Grid item xs={12} sm={6}>
@@ -414,7 +411,6 @@ export default function SignUpForm() {
                                     label="State"
                                     helperText={state.helperText}
                                     error={state.error}
-                                    required
                                 />
                             )}
                             onChange={(event: any, newValue: string | null) => {

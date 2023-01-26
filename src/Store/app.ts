@@ -11,14 +11,16 @@ export type UserData = {
 export interface AppState {
     userData: UserData;
     loading: boolean;
-    error: UIError;
-    snackbar: {
-        open: boolean;
-        vertical: verticalType;
-        horizontal: horizontalType;
-        msg: string;
-    };
+    error: UIErrorType;
+    snackbar: SnackbarState;
 }
+
+export interface SnackbarState {
+    open: boolean;
+    vertical: verticalType;
+    horizontal: horizontalType;
+    msg: string;
+};
 
 export interface AppAction {
     payload?: anyObject;
@@ -34,7 +36,7 @@ type anyObject = {
 type horizontalType = "center" | "left" | "right";
 type verticalType = "bottom" | "top";
 
-type UIError = string | null;
+type UIErrorType = string | null;
 
 export enum AppActions {
     OPEN_SNACKBAR = "open_snackbar",
@@ -66,13 +68,6 @@ const appReducer = (
     }
 };
 
-// const initialUserData: UserData = {
-//     name: "nick",
-//     email: "nick@gmail.com",
-//     occupation: "occu",
-//     state: "state",
-//     id: "1231231-sjdklglsdfg-123123"
-// }
 
 const initialUserData: UserData = {
     name: "",

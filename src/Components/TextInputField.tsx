@@ -1,6 +1,6 @@
 import { TextField } from "@mui/material";
 import React from "react";
-import { InputData, UserInputData } from "../utils/userData.interface";
+import { InputData, UserInputData } from "../Interfaces/userData.interface";
 
 interface Props {
     setInputData: (value: React.SetStateAction<UserInputData>) => void;
@@ -20,7 +20,6 @@ export const TextInputField = (props: Props) => {
             value={data.value}
             autoFocus={props.autoFocus !== undefined ? props.autoFocus : false}
             autoComplete={id}
-            required
             fullWidth
             id={id}
             label={label}
