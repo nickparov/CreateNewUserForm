@@ -1,16 +1,29 @@
-import { Alert, Collapse, IconButton } from "@mui/material";
-import { UIErrorType } from "../Store/app";
+import React from "react";
 
+import { Alert, Collapse, IconButton } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 
+import { AppActions, appDispatchFunc, UIErrorType } from "../Store/app";
+import { AppDispatchContext } from "../App";
+
 interface Props {
-    clickHandler: () => void;
     error: UIErrorType;
 }
 
 export const CustomAlert = (props: Props) => {
-    const { clickHandler, error } = props;
+    const dispatch = React.useContext(AppDispatchContext) as appDispatchFunc;
+    const { error } = props;
+
     const errorExists = !!error;
+
+    const clickHandler = () => {
+        dispatch({
+            type: AppActions.SET_ERROR,
+            payload: {
+                value: false,
+            },
+        });
+    };
 
     return (
         <Collapse in={errorExists}>

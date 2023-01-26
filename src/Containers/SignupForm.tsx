@@ -312,15 +312,6 @@ export default function SignUpForm() {
         });
     };
 
-    const closeAlertClickHandler = () => {
-        dispatch({
-            type: AppActions.SET_ERROR,
-            payload: {
-                value: false,
-            },
-        });
-    };
-
     return (
         <Box
             sx={{
@@ -332,7 +323,6 @@ export default function SignUpForm() {
         >
             <CustomAlert
                 error={appState.error}
-                clickHandler={closeAlertClickHandler}
             />
 
             <Avatar sx={{ m: 1, bgcolor: "info.main" }}>
